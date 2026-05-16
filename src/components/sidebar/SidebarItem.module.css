@@ -1,0 +1,16 @@
+.item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 16px;
+  border-radius: 12px;
+  color: #0f172a;
+  margin-bottom: 10px;
+  background: #ffffff;
+  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.05);
+  text-decoration: none;
+}
+
+.icon {
+  font-size: 0.95rem;
+}
