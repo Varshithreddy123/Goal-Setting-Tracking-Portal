@@ -25,13 +25,29 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
     const checkin = await Checkin.findById(params.id);
     if (!checkin) return notFound('Check-in not found');
 
+    const checkinGoal = await Goal.findById(checkin.goalId)
+      .select('deadline metricDirection isShared parentGoalId createdBy')
+      .lean<any>();
+    const isPrimarySharedGoal = checkinGoal?.isShared === true && !checkinGoal.parentGoalId;
+
     const progressStatus = body?.progressStatus;
     const managerComment = body?.managerComment;
+
+    const isSharedRecipient = checkinGoal?.isShared === true && !!checkinGoal.parentGoalId;
+
+    // Shared KPI governance: recipients must NOT directly create/update check-ins.
+    if (isSharedRecipient && auth.role !== 'admin') {
+      return json(
+        { ok: false, error: { message: 'Shared KPI achievements are managed by the primary owner' } },
+        { status: 403 }
+      );
+    }
 
     // Role-based field restrictions:
     // - employee: can update plannedTarget/actualAchievement/progressStatus; cannot edit managerComment
     // - manager: can update managerComment and progressStatus; cannot change planned/actual numbers
     // - admin: can edit everything
+
     const isEmployee = auth.role === 'employee';
     const isManager = auth.role === 'manager';
     const isAdmin = auth.role === 'admin';
@@ -39,7 +55,7 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
     const updates: any = {};
 
     const forbiddenForEmployee = new Set(['managerComment']);
-    const forbiddenForManager = new Set(['plannedTarget', 'actualAchievement']);
+    const forbiddenForManager = isPrimarySharedGoal ? new Set<string>() : new Set(['plannedTarget', 'actualAchievement']);
 
     if (body?.plannedTarget !== undefined) {
       const v = toNumber(body.plannedTarget);
@@ -94,18 +110,13 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
     await checkin.save();
 
     // Load metricDirection + deadline to compute score
-    const goalDoc = await Goal.findById(checkin.goalId)
-      .select('deadline metricDirection')
-      .lean<any>();
-
-
     const { calculateScore } = await import('@/utils/scoring');
 
     const computedScore = calculateScore({
-      direction: goalDoc?.metricDirection ?? 'Min',
+      direction: checkinGoal?.metricDirection ?? 'Min',
       target: checkin.plannedTarget,
       achievement: checkin.actualAchievement,
-      deadline: goalDoc?.deadline,
+      deadline: checkinGoal?.deadline,
       completionDate: undefined,
     });
 
@@ -113,17 +124,15 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
     await checkin.save();
 
     // Sync shared goal achievements if this is the primary owner
-    const goal = (await Goal.findById(checkin.goalId)
-      .select('isShared parentGoalId')
-      .lean<{ isShared?: boolean; parentGoalId?: string | null }>());
-
-    if (goal?.isShared && !goal.parentGoalId) {
-      const parentId = (goal as any)._id ? String((goal as any)._id) : String(checkin.goalId);
+    if (checkinGoal?.isShared && !checkinGoal.parentGoalId) {
+      const parentId = String(checkin.goalId);
       const children = await Goal.find({ parentGoalId: parentId }).select('_id').lean();
       for (const child of children) {
         await Checkin.findOneAndUpdate(
           { goalId: String(child._id), quarter: checkin.quarter },
           {
+            goalId: String(child._id),
+            quarter: checkin.quarter,
             plannedTarget: checkin.plannedTarget,
             actualAchievement: checkin.actualAchievement,
             progressStatus: checkin.progressStatus,

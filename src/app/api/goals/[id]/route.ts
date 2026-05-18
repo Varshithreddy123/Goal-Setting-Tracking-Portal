@@ -19,9 +19,14 @@ function mapApprovalStatus(rawApprovalStatus: unknown) {
 
   if (lower === 'approved') return 'Approved';
   if (lower === 'rejected') return 'Rejected';
+  if (lower === 'submitted') return 'Submitted';
   if (lower === 'pending') return 'Pending';
 
   return 'Pending';
+}
+
+function isPersonalGoalQuery() {
+  return { $or: [{ isShared: false }, { isShared: { $ne: true } }, { parentGoalId: null }] };
 }
 
 async function getCurrentEmployeeId(authUid: string) {
@@ -108,7 +113,7 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
       // Manager + locked: enforce allowed fields
       if (isManager) {
         const attemptedFields = new Set(Object.keys(body || {}));
-        const managerAllowedFields = new Set(['approvalStatus', 'managerComment', 'target', 'weightage']);
+        const managerAllowedFields = new Set(['approvalStatus', 'managerComment']);
         const invalidFields = Array.from(attemptedFields).filter((f) => !managerAllowedFields.has(f));
 
         if (invalidFields.length > 0) {
@@ -121,6 +126,7 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
           );
         }
       }
+
     }
 
     const updates: any = {};
@@ -191,12 +197,12 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
       updates.deadline = incomingDeadline;
     }
     if (body?.status !== undefined) updates.status = normalizeStatus(body.status);
+    if (body?.managerComment !== undefined) {
+      updates.managerComment = typeof body.managerComment === 'string' ? body.managerComment.trim() : '';
+    }
 
     if (body?.approvalStatus !== undefined) {
-      const raw = normalizeStatus(body.approvalStatus);
-      const lower = typeof raw === 'string' ? raw.toLowerCase() : '';
-      const mappedApprovalStatus =
-        lower === 'approved' ? 'Approved' : lower === 'rejected' ? 'Rejected' : 'Pending';
+      const mappedApprovalStatus = mapApprovalStatus(body.approvalStatus);
       updates.approvalStatus = mappedApprovalStatus;
 
       // Return for rework: auto-unlock
@@ -271,9 +277,43 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
       if (!rules.ok) return json({ ok: false, error: { message: rules.message } }, { status: 400 });
     }
 
+    if (updates.approvalStatus === 'Approved') {
+      const employeeGoals = await Goal.find({ employeeId: goal.employeeId, _id: { $ne: goal._id } })
+        .select({ weightage: 1 })
+        .lean<{ weightage: number }[]>();
+      const projectedTotal = employeeGoals.reduce((acc, g) => acc + (Number(g.weightage) || 0), 0)
+        + Number(updates.weightage ?? goal.weightage ?? 0);
+
+      if (employeeGoals.length + 1 > 8) {
+        return badRequest('Maximum 8 goals per employee');
+      }
+
+      if (employeeGoals.some((g) => Number(g.weightage) < 10) || Number(updates.weightage ?? goal.weightage) < 10) {
+        return badRequest('Each goal weightage must be at least 10');
+      }
+
+      if (projectedTotal !== 100) {
+        return badRequest(`Total weightage must be exactly 100% before approval. Current total: ${projectedTotal}%`);
+      }
+    }
+
     // Persist
     goal.set(updates);
     await goal.save();
+
+    if ((isManager || isAdmin) && updates.approvalStatus === 'Rejected') {
+      await Goal.updateMany(
+        { employeeId: goal.employeeId, ...isPersonalGoalQuery() },
+        { $set: { approvalStatus: 'Rejected', locked: false } }
+      );
+    }
+
+    if ((isManager || isAdmin) && updates.approvalStatus === 'Approved') {
+      await Goal.updateMany(
+        { employeeId: goal.employeeId, approvalStatus: 'Submitted', ...isPersonalGoalQuery() },
+        { $set: { approvalStatus: 'Approved', locked: true } }
+      );
+    }
 
     // Log changes if goal was locked
     if (oldValues.locked) {

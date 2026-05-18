@@ -21,6 +21,11 @@ export async function POST(req: NextRequest) {
     const finalAuth = auth2 ?? auth;
     if (!finalAuth) return unauthorized('Missing mock auth');
 
+    const goalId = body?.goalId;
+    const goalDoc = typeof goalId === 'string'
+      ? await Goal.findById(goalId).select('deadline metricDirection isShared parentGoalId').lean<any>()
+      : null;
+
     // Enforce check-in schedule for non-admins (admin bypasses automatically).
     // Current implementation uses the request's quarter to infer the phase.
     // BRD mapping (existing schedule helper):
@@ -28,7 +33,18 @@ export async function POST(req: NextRequest) {
     // - Q2 (October)
     // - Q3 (January)
     // - Q4/Annual (March/April)
-    if (finalAuth.role !== 'admin') {
+    const isPrimarySharedGoal = goalDoc?.isShared === true && !goalDoc.parentGoalId;
+    const isSharedRecipient = goalDoc?.isShared === true && !!goalDoc.parentGoalId;
+
+    // Shared KPI governance: recipients must NOT create check-ins.
+    if (isSharedRecipient && finalAuth.role !== 'admin') {
+      return json(
+        { ok: false, error: { message: 'Shared KPI achievements are managed by the primary owner' } },
+        { status: 403 }
+      );
+    }
+
+    if (finalAuth.role !== 'admin' && !(finalAuth.role === 'manager' && isPrimarySharedGoal)) {
       const quarterStr = typeof body?.quarter === 'string' ? body.quarter.trim() : '';
       const quarterPhase =
         quarterStr.startsWith('Q1') ? 'Q1' :
@@ -36,7 +52,6 @@ export async function POST(req: NextRequest) {
         quarterStr.startsWith('Q3') ? 'Q3' :
         quarterStr.startsWith('Q4') ? 'Q4' :
         'NONE';
-
       const override = await CycleWindow.findOne({ phase: quarterPhase, override: true }).lean<{ isOpen?: boolean } | null>();
       const isOpen = override?.isOpen ?? false;
 
@@ -45,7 +60,6 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    const goalId = body?.goalId;
 
     const quarter = body?.quarter;
     const plannedTarget = toNumber(body?.plannedTarget);
@@ -83,11 +97,6 @@ export async function POST(req: NextRequest) {
     }
 
     // Compute Phase-2 progress score using Goal.metricDirection
-    const goalDoc = await Goal.findById(goalId)
-      .select('deadline metricDirection')
-      .lean<any>();
-
-
     const metricDirection = goalDoc?.metricDirection ?? 'Min';
 
     // For score calculation:
@@ -156,8 +165,9 @@ export async function GET(req: NextRequest) {
 
     // Role-based filtering for list.
     // Employee: only check-ins whose goal belongs to them.
-    // Manager/Admin: all check-ins for now (team-scoping can be added once hierarchy/team mapping is used).
-    // NOTE: We scope employee properly using Goal ownership.
+    // Manager: only check-ins for team goals.
+    // Admin: all check-ins.
+
     if (auth.role === 'employee') {
       const user = await User.findOne({ uid: auth.uid }).select('employeeId').lean<{ employeeId: string } | null>();
       const goals = await Goal.find({ employeeId: user?.employeeId || auth.uid }).select({ _id: 1 }).lean<{ _id: any }[]>();

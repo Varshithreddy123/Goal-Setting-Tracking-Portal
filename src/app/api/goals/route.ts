@@ -142,9 +142,9 @@ export async function POST(req: NextRequest) {
       weightage,
       deadline,
       status: status ?? 'Active',
-      approvalStatus: approvalStatus ?? 'Pending',
+      approvalStatus: auth.role === 'admin' && approvalStatus ? approvalStatus : 'Pending',
       managerComment: '', // Ensure default value is set
-      locked: locked ?? false,
+      locked: auth.role === 'admin' && typeof locked === 'boolean' ? locked : false,
     });
 
     return json({
