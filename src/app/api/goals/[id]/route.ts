@@ -111,9 +111,17 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
       }
 
       // Manager + locked: enforce allowed fields
+      // Allow target and weightage edits when goal is Submitted (before approval)
       if (isManager) {
         const attemptedFields = new Set(Object.keys(body || {}));
         const managerAllowedFields = new Set(['approvalStatus', 'managerComment']);
+        
+        // If goal is Submitted, also allow target and weightage edits
+        if (goal.approvalStatus === 'Submitted') {
+          managerAllowedFields.add('target');
+          managerAllowedFields.add('weightage');
+        }
+        
         const invalidFields = Array.from(attemptedFields).filter((f) => !managerAllowedFields.has(f));
 
         if (invalidFields.length > 0) {
