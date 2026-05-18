@@ -4,6 +4,8 @@ import { Goal } from '@/models/Goal';
 import { json, unauthorized, serverError } from '@/utils/api';
 import { getAuthFromRequest } from '../../../_helpers/auth';
 
+export const dynamic = 'force-dynamic';
+
 export async function GET(req: NextRequest) {
   await connectToMongo();
 

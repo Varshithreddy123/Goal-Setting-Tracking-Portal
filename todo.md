@@ -1,20 +1,21 @@
-# TODO - User Roles & Personas (Employee / Manager / Admin)
+# TODO - Enterprise PMS Backend Governance (RBAC/Locks/Shared KPI)
 
-## Plan (approved)
-1. Tighten API-level RBAC to match personas.
-2. Enforce “locked goals” behavior as read-only mechanism for employees after submission.
-3. Restrict unlocking (`locked=false`) strictly to Admin/HR.
-4. Add role-aware filtering for check-ins.
-5. Ensure manager can update approval-related fields/comments only.
-6. Run lint/build and validate flows.
+- [ ] Step 1: Tighten shared-recipient check-in governance
+  - [x] POST `/src/app/api/checkins/route.ts`: block recipients (`goal.isShared=true && parentGoalId`) from creating check-ins
+  - [x] PATCH `/src/app/api/checkins/[id]/route.ts`: block recipients from updating check-ins
+  - [x] Keep primary-owner sync propagation intact
 
-## Steps
-- [ ] Inspect current API RBAC implementation for goals/check-ins and identify gaps.
-- [ ] Update `src/app/api/goals/route.ts` (POST/GET) role rules.
-- [ ] Update `src/app/api/goals/[id]/route.ts` (PATCH/GET/DELETE) role rules and locked/unlock rules.
-- [ ] Update `src/app/api/checkins/route.ts` (POST/GET) role rules and filtering.
-- [ ] Update `src/app/api/checkins/[id]/route.ts` (PATCH) role rules.
-- [ ] Add any required validations (goal ownership/team ownership, allowed field updates).
-- [ ] Run `npm run lint` and `npm run build`.
-- [ ] Manual smoke-test: employee vs manager vs admin flows.
+
+- [ ] Step 2: Add hierarchical scoping for manager reads
+  - [ ] GET `/src/app/api/goals/route.ts` for manager: return only team goals (via `User.managerId`)
+  - [ ] GET `/src/app/api/checkins/route.ts` for manager: return check-ins only for team goals
+
+- [ ] Step 3: Consolidate locked/unlock governance + audit
+  - [ ] Ensure admin unlock/override actions are audit logged consistently
+  - [ ] Ensure manager cannot set forbidden fields that affect locking
+
+- [ ] Step 4: Validate with lint/build + quick smoke tests
+  - [ ] `npm run lint`
+  - [ ] `npm run build`
+  - [ ] Manual smoke tests for employee/manager/admin flows
 

@@ -6,6 +6,7 @@ import { User } from '@/models/User';
 import { CycleWindow } from '@/models/CycleWindow';
 import { json, badRequest, unauthorized, serverError } from '@/utils/api';
 import { getAuthFromRequest } from '../../_helpers/auth';
+import { getCurrentCyclePhase } from '../../_helpers/schedule';
 
 
 export async function POST(req: NextRequest) {
@@ -50,7 +51,7 @@ export async function POST(req: NextRequest) {
     // Only allow submit during Goal Setting window unless admin.
     if (auth.role !== 'admin') {
       const override = await CycleWindow.findOne({ phase: 'GOAL_SETTING', override: true }).lean<{ isOpen?: boolean } | null>();
-      const isOpen = override?.isOpen ?? false;
+      const isOpen = override?.isOpen ?? (getCurrentCyclePhase() === 'GOAL_SETTING');
 
       if (!isOpen) {
         return json({ ok: false, error: { message: 'Goal setting window is closed. (Opens in May)' } }, { status: 403 });

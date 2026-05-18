@@ -164,13 +164,14 @@ export default function EmployeeCheckinsPage() {
             <div style={{ marginBottom: 16 }}>
               <label style={labelStyle}>Progress Status*</label>
               <select 
+                aria-label="Progress Status"
                 value={progressStatus} 
                 onChange={e => setProgressStatus(e.target.value)} 
                 style={inputStyle}
+                title="Progress Status"
               >
                 <option value="Not Started">Not Started</option>
                 <option value="On Track">On Track</option>
-                <option value="Behind">Behind</option>
                 <option value="Completed">Completed</option>
               </select>
             </div>

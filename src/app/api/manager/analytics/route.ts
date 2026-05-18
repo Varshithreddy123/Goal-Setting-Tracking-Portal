@@ -18,22 +18,24 @@ export async function GET(req: NextRequest) {
       return json({ ok: false, error: { message: 'Forbidden' } }, { status: 403 });
     }
 
-    const manager = await User.findOne({ email: auth.email }).lean<{ employeeId: string } | null>();
+    const manager = await User.findOne({ uid: auth.uid }).lean<{ employeeId: string } | null>();
     if (!manager) return unauthorized('Manager not found');
 
     const filter = auth.role === 'admin' ? {} : { managerId: manager.employeeId };
-    const teamMembers = await User.find(filter).lean();
+    const teamMembers = await User.find(filter).sort({ name: 1 }).lean();
     const teamIds = teamMembers.map(m => m.employeeId);
 
-    const [goals, checkins] = await Promise.all([
-      Goal.find({ employeeId: { $in: teamIds } }).lean(),
-      Checkin.find({ goalId: { $in: (await Goal.find({ employeeId: { $in: teamIds } }).select('_id').lean()).map(g => String(g._id)) } }).lean()
-    ]);
+    const goals = await Goal.find({ employeeId: { $in: teamIds } }).lean();
+    const goalIds = goals.map(g => String(g._id));
+    const checkins = await Checkin.find({ goalId: { $in: goalIds } }).sort({ createdAt: -1 }).lean();
 
     // Calculate team-wide metrics
     const totalTeamGoals = goals.length;
     const approvedTeamGoals = goals.filter(g => g.approvalStatus === 'Approved').length;
     const pendingApprovals = goals.filter(g => g.approvalStatus === 'Submitted').length;
+    const completedCheckins = checkins.filter(c => c.progressStatus === 'Completed').length;
+    const goalsWithCheckins = new Set(checkins.map(c => c.goalId)).size;
+    const pendingCheckins = Math.max(approvedTeamGoals - goalsWithCheckins, 0);
 
     // Manager review breakdown (requested): how many goals each manager reviewed/approved/pending.
     // In this data model, manager review maps to the goal's approvalStatus.
@@ -45,24 +47,32 @@ export async function GET(req: NextRequest) {
     const statusDistribution = [
       { name: 'Completed', value: checkins.filter(c => c.progressStatus === 'Completed').length },
       { name: 'On Track', value: checkins.filter(c => c.progressStatus === 'On Track').length },
-      { name: 'Behind', value: checkins.filter(c => c.progressStatus === 'Behind').length },
       { name: 'Not Started', value: checkins.filter(c => c.progressStatus === 'Not Started').length },
     ].filter(d => d.value > 0);
 
     // Individual member progress
     const memberProgress = teamMembers.map(member => {
       const memberGoals = goals.filter(g => g.employeeId === member.employeeId);
+      const memberApprovedGoals = memberGoals.filter(g => g.approvalStatus === 'Approved');
       const memberGoalIds = memberGoals.map(g => String(g._id));
       const memberCheckins = checkins.filter(c => memberGoalIds.includes(c.goalId));
+      const memberCompletedCheckins = memberCheckins.filter(c => c.progressStatus === 'Completed').length;
+      const latestCheckin = memberCheckins[0];
       
-      const completionRate = memberGoals.length > 0 
-        ? (memberCheckins.filter(c => c.progressStatus === 'Completed').length / memberGoals.length) * 100 
+      const completionRate = memberApprovedGoals.length > 0
+        ? (memberCompletedCheckins / memberApprovedGoals.length) * 100
         : 0;
 
       return {
         name: member.name,
         employeeId: member.employeeId,
+        department: member.department,
         goalsCount: memberGoals.length,
+        approvedGoalsCount: memberApprovedGoals.length,
+        checkinsCount: memberCheckins.length,
+        completedCheckins: memberCompletedCheckins,
+        latestStatus: latestCheckin?.progressStatus ?? 'No check-in',
+        latestQuarter: latestCheckin?.quarter ?? 'N/A',
         completionRate: Math.round(completionRate)
       };
     });
@@ -75,6 +85,9 @@ export async function GET(req: NextRequest) {
           totalGoals: totalTeamGoals,
           approvedGoals: approvedTeamGoals,
           pendingApprovals,
+          completedCheckins,
+          pendingCheckins,
+          checkinCompletionRate: approvedTeamGoals > 0 ? Math.round((goalsWithCheckins / approvedTeamGoals) * 100) : 0,
 
           // Manager review breakdown (requested)
           reviewedGoalsByManager,
