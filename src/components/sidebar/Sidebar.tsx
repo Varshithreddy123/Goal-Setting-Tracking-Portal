@@ -78,10 +78,12 @@ export default function Sidebar({ role }: { role: SidebarRole }) {
         {navItems.map((item) => {
           const active = isActive(item, pathname);
           const Icon = item.icon ? iconMap[item.icon] : null;
+          const href = item.href.startsWith('/dashboard/') ? item.href : item.href.startsWith('/') ? `/dashboard/${role}${item.href}` : `/dashboard/${role}/${item.href}`;
+
           return (
             <Link
               key={item.href}
-              href={item.href}
+              href={href}
               className={active ? styles.navItemActive : styles.navItem}
             >
               {Icon ? <Icon className={styles.iconLabel} size={16} /> : <span className={styles.iconLabel}>•</span>}

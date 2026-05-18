@@ -1,7 +1,8 @@
-// Delegates to the existing role-group implementation
-import AdminRolePage from '../../(dashboard)/admin/page';
-
-export default function AdminDashboardPage() {
-  return <AdminRolePage />;
+export default function AdminDashboard() {
+  return (
+    <div>
+      <h2>Admin Dashboard</h2>
+      <p>Admin cycle setup, hierarchy management, and audit reporting live here.</p>
+    </div>
+  );
 }
-

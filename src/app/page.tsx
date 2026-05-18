@@ -20,9 +20,10 @@ export default function Home() {
             Track employee goals, approvals, quarterly achievements, and organizational performance with precision-engineered analytics.
           </p>
           <div className="hero-actions">
-            <a className="button primary" href="/">
+            <a className="button primary" href="/login">
               Login to Dashboard
             </a>
+
             <a className="button secondary" href="#demo">
               View Demo
             </a>

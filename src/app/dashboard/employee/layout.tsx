@@ -1,9 +1,17 @@
 import type { ReactNode } from 'react';
-
-// Delegates to the existing role-group implementation
-import EmployeeRoleLayout from '../../(dashboard)/employee/layout';
+import Sidebar from '../../../components/sidebar/Sidebar';
+import UserProfileHeader from '../../../components/sidebar/UserProfileHeader';
 
 export default function EmployeeDashboardLayout({ children }: { children: ReactNode }) {
-  return <EmployeeRoleLayout>{children}</EmployeeRoleLayout>;
+  return (
+    <div style={{ display: 'flex', alignItems: 'stretch' }}>
+      <Sidebar role="employee" />
+      <main style={{ flex: 1, padding: '28px 28px 60px', position: 'relative' }}>
+        <div style={{ position: 'absolute', top: '24px', right: '28px', zIndex: 50 }}>
+          <UserProfileHeader />
+        </div>
+        {children}
+      </main>
+    </div>
+  );
 }
-

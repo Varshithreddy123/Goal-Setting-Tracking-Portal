@@ -6,14 +6,14 @@ export type MenuItem = {
 };
 
 export const employeeSidebar: MenuItem[] = [
-  { label: 'Dashboard', href: '/employee', icon: 'LayoutDashboard' },
-  { label: 'Create Goals', href: '/employee/create-goals', icon: 'Target' },
-  { label: 'My Goals', href: '/employee/goals', icon: 'ClipboardList' },
-  { label: 'Quarterly Check-ins', href: '/employee/checkins', icon: 'CalendarCheck' },
-  { label: 'Shared Goals', href: '/employee/shared-goals', icon: 'Users' },
-  { label: 'Achievements', href: '/employee/achievements', icon: 'TrendingUp' },
-  { label: 'Notifications', href: '/employee/notifications', icon: 'Bell' },
-  { label: 'Profile', href: '/employee/profile', icon: 'User' },
+  { label: 'Dashboard', href: '/dashboard/employee', icon: 'LayoutDashboard' },
+  { label: 'Create Goals', href: '/dashboard/employee/create-goals', icon: 'Target' },
+  { label: 'My Goals', href: '/dashboard/employee/goals', icon: 'ClipboardList' },
+  { label: 'Quarterly Check-ins', href: '/dashboard/employee/checkins', icon: 'CalendarCheck' },
+  { label: 'Shared Goals', href: '/dashboard/employee/shared-goals', icon: 'Users' },
+  { label: 'Achievements', href: '/dashboard/employee/achievements', icon: 'TrendingUp' },
+  { label: 'Notifications', href: '/dashboard/employee/notifications', icon: 'Bell' },
+  { label: 'Profile', href: '/dashboard/employee/profile', icon: 'User' },
 ];
 
 export const employeeDashboardCards = [
@@ -50,15 +50,16 @@ export const employeeDashboardCards = [
 ];
 
 export const managerSidebar: MenuItem[] = [
-  { label: 'Dashboard', href: '/manager', icon: 'LayoutDashboard' },
-  { label: 'Goal Approvals', href: '/manager/approvals', icon: 'BadgeCheck' },
-  { label: 'Team Goals', href: '/manager/team-goals', icon: 'Users' },
-  { label: 'Quarterly Reviews', href: '/manager/reviews', icon: 'CalendarCheck' },
-  { label: 'Check-in Comments', href: '/manager/comments', icon: 'MessageSquare' },
-  { label: 'Shared KPI', href: '/manager/shared-kpi', icon: 'Share2' },
-  { label: 'Team Performance', href: '/manager/performance', icon: 'BarChart3' },
-  { label: 'Notifications', href: '/manager/notifications', icon: 'Bell' },
-  { label: 'Profile', href: '/manager/profile', icon: 'User' },
+  { label: 'Dashboard', href: '/dashboard/manager', icon: 'LayoutDashboard' },
+  { label: 'Team Management', href: '/dashboard/manager/team-management', icon: 'Users' },
+  { label: 'Goal Approvals', href: '/dashboard/manager/approvals', icon: 'BadgeCheck' },
+  { label: 'Team Performance', href: '/dashboard/manager/team-performance', icon: 'BarChart3' },
+  { label: 'Team Goals', href: '/dashboard/manager/team-goals', icon: 'Users' },
+  { label: 'Quarterly Reviews', href: '/dashboard/manager/reviews', icon: 'CalendarCheck' },
+  { label: 'Check-in Comments', href: '/dashboard/manager/comments', icon: 'MessageSquare' },
+  { label: 'Shared KPI', href: '/dashboard/manager/shared-kpi', icon: 'Share2' },
+  { label: 'Notifications', href: '/dashboard/manager/notifications', icon: 'Bell' },
+  { label: 'Profile', href: '/dashboard/manager/profile', icon: 'User' },
 ];
 
 export const managerDashboardCards = [
@@ -95,19 +96,15 @@ export const managerDashboardCards = [
 ];
 
 export const adminSidebar: MenuItem[] = [
-  { label: 'Dashboard', href: '/admin', icon: 'LayoutDashboard' },
-  { label: 'User Management', href: '/admin/users', icon: 'Users' },
-  { label: 'Cycle Management', href: '/admin/cycles', icon: 'CalendarRange' },
-  { label: 'Goal Monitoring', href: '/admin/goals', icon: 'Target' },
-  { label: 'Shared Goals', href: '/admin/shared-goals', icon: 'Share2' },
-  { label: 'Reports', href: '/admin/reports', icon: 'FileSpreadsheet' },
-  { label: 'Completion Dashboard', href: '/admin/completion-dashboard', icon: 'PieChart' },
-  { label: 'Audit Logs', href: '/admin/audit-logs', icon: 'History' },
-  { label: 'Escalations', href: '/admin/escalations', icon: 'AlertTriangle' },
-  { label: 'Analytics', href: '/admin/analytics', icon: 'BarChart4' },
-  { label: 'Notifications', href: '/admin/notifications', icon: 'Bell' },
-  { label: 'Settings', href: '/admin/settings', icon: 'Settings' },
+  { label: 'Dashboard', href: '/dashboard/admin', icon: 'LayoutDashboard' },
+  { label: 'Analytics', href: '/dashboard/admin/analytics', icon: 'BarChart4' },
+  { label: 'Audit Trail', href: '/dashboard/admin/audit', icon: 'History' },
+  { label: 'Shared Goals', href: '/dashboard/admin/shared-goals', icon: 'Share2' },
+  { label: 'Create User', href: '/dashboard/admin/users/create', icon: 'Users' },
+  { label: 'Manage Users', href: '/dashboard/admin/users/manage', icon: 'Users' },
+  { label: 'Cycle Management', href: '/dashboard/admin/cycles', icon: 'RotateCw' },
 ];
+
 
 export const adminDashboardCards = [
   {
